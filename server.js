@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
-const axios = require('axios'); // npm install axios
+const axios = require('axios');
 
 // 7-अंकीय रैंडम नंबर जनरेट करने का फंक्शन
 function generateNumericId() {
@@ -37,40 +37,44 @@ wss.on('connection', (ws) => {
     const userId = generateNumericId();
     users[userId] = ws;
 
-    console.log('New user connected with ID:', userId);
+    console.log('New user connected with ID:', userId); // डीबग लॉग
     ws.send(JSON.stringify({ type: 'userId', userId: userId }));
 
     ws.on('message', (message) => {
-        console.log('Received message:', message.toString());
-        const data = JSON.parse(message);
+        console.log('Received message data:', message.toString()); // डीबग लॉग
+        try {
+            const data = JSON.parse(message);
 
-        if (data.type === 'connect') {
-            const targetId = data.targetId;
-            console.log(`Attempting to connect ${userId} to ${targetId}`);
-            if (users[targetId]) {
-                ws.send(JSON.stringify({ type: 'connected', message: `Connected to ${targetId}` }));
-                users[targetId].send(JSON.stringify({ type: 'connected', message: `Connected to ${userId}` }));
-                users[targetId].partner = userId;
-                ws.partner = targetId;
-                console.log(`Successfully connected ${userId} to ${targetId}`);
-            } else {
-                ws.send(JSON.stringify({ type: 'error', message: 'User not found' }));
-                console.log(`Target ID ${targetId} not found`);
+            if (data.type === 'connect') {
+                const targetId = data.targetId;
+                console.log(`Attempting to connect ${userId} to ${targetId}`);
+                if (users[targetId]) {
+                    ws.send(JSON.stringify({ type: 'connected', message: `Connected to ${targetId}` }));
+                    users[targetId].send(JSON.stringify({ type: 'connected', message: `Connected to ${userId}` }));
+                    users[targetId].partner = userId;
+                    ws.partner = targetId;
+                    console.log(`Successfully connected ${userId} to ${targetId}`);
+                } else {
+                    ws.send(JSON.stringify({ type: 'error', message: 'User not found' }));
+                    console.log(`Target ID ${targetId} not found`);
+                }
             }
-        }
 
-        if (data.type === 'message') {
-            const targetId = ws.partner;
-            if (targetId && users[targetId]) {
-                users[targetId].send(JSON.stringify({ 
-                    type: 'message', 
-                    message: data.message, 
-                    fromName: data.fromName 
-                }));
-                console.log(`Message from ${userId} (${data.fromName}) to ${targetId}: ${data.message}`);
-            } else {
-                console.log(`Target ID ${targetId} not found for message`);
+            if (data.type === 'message') {
+                const targetId = ws.partner;
+                if (targetId && users[targetId]) {
+                    users[targetId].send(JSON.stringify({ 
+                        type: 'message', 
+                        message: data.message, 
+                        fromName: data.fromName 
+                    }));
+                    console.log(`Message from ${userId} (${data.fromName}) to ${targetId}: ${data.message}`);
+                } else {
+                    console.log(`Target ID ${targetId} not found for message`);
+                }
             }
+        } catch (e) {
+            console.error('Error parsing message:', e);
         }
     });
 

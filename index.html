@@ -33,11 +33,32 @@
             width: 100%;
             max-width: 550px;
             animation: fadeIn 0.5s ease;
+            display: none; /* शुरू में छिपा हुआ */
         }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* प्रीलोडर */
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
         /* हेडिंग */
@@ -190,7 +211,8 @@
 </head>
 
 <body>
-    <div class="chat-container">
+    <div class="loader" id="loader"></div>
+    <div class="chat-container" id="chat-container">
         <h2>Private Chat</h2>
         <label>Enter Your Name: <input type="text" id="user-name" placeholder="Your Name"></label>
         <p>Your Unique ID: <span id="user-id">Loading...</span></p>
@@ -207,59 +229,86 @@
         let userId = '';
         let userName = '';
         let partnerId = '';
+        let isConnected = false;
 
+        // प्रीलोडर दिखाने और छिपाने का फंक्शन
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('chat-container').style.display = 'none';
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'block';
+        }
+
+        // WebSocket कनेक्शन की कोशिश
         try {
-            ws = new WebSocket('wss://private-chat-app-45vp.onrender.com'); // सटीक Render URL
+            showLoader(); // प्रीलोडर दिखाएं
+            ws = new WebSocket('wss://private-chat-app-45vp.onrender.com');
+            ws.onopen = () => {
+                console.log('Connected to WebSocket server');
+                isConnected = true;
+                hideLoader(); // कनेक्शन सफल होने पर प्रीलोडर छिपाएं
+            };
+
+            ws.onmessage = (event) => {
+                console.log('Message received:', event.data);
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'userId' && !isConnected) {
+                    userId = data.userId;
+                    console.log('Received userId:', userId);
+                    document.getElementById('user-id').innerText = userId;
+                    hideLoader(); // ID मिलने पर प्रीलोडर छिपाएं
+                    isConnected = true;
+                }
+
+                if (data.type === 'connected') {
+                    partnerId = data.message.split(' ')[2];
+                    document.getElementById('chat-box').innerHTML += `<p>${data.message}</p>`;
+                }
+
+                if (data.type === 'message') {
+                    document.getElementById('chat-box').innerHTML += `<p>${data.fromName}: ${data.message}</p>`;
+                }
+
+                if (data.type === 'disconnected') {
+                    document.getElementById('chat-box').innerHTML += `<p>${data.message}</p>`;
+                    setTimeout(() => {
+                        document.getElementById('chat-box').innerHTML = '';
+                        partnerId = '';
+                    }, 1000);
+                }
+
+                if (data.type === 'error') {
+                    document.getElementById('chat-box').innerHTML += `<p>Error: ${data.message}</p>`;
+                }
+
+                const chatBox = document.getElementById('chat-box');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                document.getElementById('user-id').innerText = 'Error connecting to server';
+                setTimeout(() => {
+                    if (!isConnected) {
+                        hideLoader(); // अगर कनेक्शन लंबे समय तक फेल हो, प्रीलोडर छिपाएं
+                    }
+                }, 60000); // 60 सेकंड बाद प्रीलोडर छिपाएं अगर कनेक्शन न हो
+            };
+
+            ws.onclose = () => {
+                isConnected = false;
+                showLoader(); // कनेक्शन बंद होने पर प्रीलोडर दिखाएं
+            };
+
         } catch (error) {
             console.error('WebSocket initialization failed:', error);
             document.getElementById('user-id').innerText = 'Error connecting to server';
+            hideLoader(); // तुरंत प्रीलोडर छिपाएं अगर कोई गंभीर त्रुटि हो
         }
-
-        ws.onopen = () => {
-            console.log('Connected to WebSocket server');
-        };
-
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            document.getElementById('user-id').innerText = 'Error connecting to server';
-        };
-
-        ws.onmessage = (event) => {
-            console.log('Message received:', event.data);
-            const data = JSON.parse(event.data);
-
-            if (data.type === 'userId') {
-                userId = data.userId;
-                console.log('Received userId:', userId);
-                document.getElementById('user-id').innerText = userId;
-            }
-
-            if (data.type === 'connected') {
-                partnerId = data.message.split(' ')[2];
-                document.getElementById('chat-box').innerHTML += `<p>${data.message}</p>`;
-            }
-
-            if (data.type === 'message') {
-                // मैसेज में नाम और मैसेज दिखाएं
-                document.getElementById('chat-box').innerHTML += `<p>${data.fromName}: ${data.message}</p>`;
-            }
-
-            if (data.type === 'disconnected') {
-                document.getElementById('chat-box').innerHTML += `<p>${data.message}</p>`;
-                setTimeout(() => {
-                    document.getElementById('chat-box').innerHTML = '';
-                    partnerId = '';
-                }, 1000);
-            }
-
-            if (data.type === 'error') {
-                document.getElementById('chat-box').innerHTML += `<p>Error: ${data.message}</p>`;
-            }
-
-            // चैट बॉक्स को स्क्रॉल करें
-            const chatBox = document.getElementById('chat-box');
-            chatBox.scrollTop = chatBox.scrollHeight;
-        };
 
         function connect() {
             const targetId = document.getElementById('target-id').value;
@@ -283,7 +332,6 @@
                 return;
             }
             if (message && partnerId) {
-                // मैसेज के साथ नाम भेजें
                 ws.send(JSON.stringify({ type: 'message', message: message, fromName: userName }));
                 document.getElementById('chat-box').innerHTML += `<p>You: ${message}</p>`;
                 document.getElementById('message-input').value = '';

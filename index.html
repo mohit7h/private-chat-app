@@ -159,42 +159,42 @@
         let ws;
         let userId = '';
         let partnerId = '';
-
+    
         try {
-            ws = new WebSocket('wss://your-app-name.onrender.com'); // Render URL डालें
+            ws = new WebSocket('wss://private-chat-app-45vp.onrender.com'); // सटीक Render URL
         } catch (error) {
             console.error('WebSocket initialization failed:', error);
             document.getElementById('user-id').innerText = 'Error connecting to server';
         }
-
+    
         ws.onopen = () => {
             console.log('Connected to WebSocket server');
         };
-
+    
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
             document.getElementById('user-id').innerText = 'Error connecting to server';
         };
-
+    
         ws.onmessage = (event) => {
             console.log('Message received:', event.data);
             const data = JSON.parse(event.data);
-
+    
             if (data.type === 'userId') {
                 userId = data.userId;
                 console.log('Received userId:', userId);
                 document.getElementById('user-id').innerText = userId;
             }
-
+    
             if (data.type === 'connected') {
                 partnerId = data.message.split(' ')[2];
                 document.getElementById('chat-box').innerHTML += `<p>${data.message}</p>`;
             }
-
+    
             if (data.type === 'message') {
                 document.getElementById('chat-box').innerHTML += `<p>${data.from}: ${data.message}</p>`;
             }
-
+    
             if (data.type === 'disconnected') {
                 document.getElementById('chat-box').innerHTML += `<p>${data.message}</p>`;
                 setTimeout(() => {
@@ -202,19 +202,19 @@
                     partnerId = '';
                 }, 1000);
             }
-
+    
             if (data.type === 'error') {
                 document.getElementById('chat-box').innerHTML += `<p>Error: ${data.message}</p>`;
             }
         };
-
+    
         function connect() {
             const targetId = document.getElementById('target-id').value;
             if (targetId) {
                 ws.send(JSON.stringify({ type: 'connect', targetId: targetId }));
             }
         }
-
+    
         function sendMessage() {
             const message = document.getElementById('message-input').value;
             if (message && partnerId) {
@@ -223,10 +223,11 @@
                 document.getElementById('message-input').value = '';
             }
         }
-
+    
         window.onbeforeunload = () => {
             document.getElementById('chat-box').innerHTML = '';
         };
     </script>
+    
 </body>
 </html>

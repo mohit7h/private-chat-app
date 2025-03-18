@@ -1,7 +1,11 @@
 const WebSocket = require('ws');
-const { v4: uuidv4 } = require('uuid');
 const express = require('express');
 const http = require('http');
+
+// 7-अंकीय रैंडम नंबर जनरेट करने का फंक्शन
+function generateNumericId() {
+    return Math.floor(1000000 + Math.random() * 9000000).toString(); // 1000000 से 9999999 तक
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -17,7 +21,7 @@ app.get('/', (req, res) => {
 });
 
 wss.on('connection', (ws) => {
-    const userId = uuidv4();
+    const userId = generateNumericId();
     users[userId] = ws;
 
     console.log('New user connected with ID:', userId); // डीबग लॉग

@@ -49,8 +49,13 @@ wss.on('connection', (ws) => {
         if (data.type === 'message') {
             const targetId = ws.partner;
             if (targetId && users[targetId]) {
-                users[targetId].send(JSON.stringify({ type: 'message', message: data.message, from: userId }));
-                console.log(`Message from ${userId} to ${targetId}: ${data.message}`); // डीबग लॉग
+                // मैसेज के साथ नाम भेजें
+                users[targetId].send(JSON.stringify({ 
+                    type: 'message', 
+                    message: data.message, 
+                    fromName: data.fromName // नाम भेजें
+                }));
+                console.log(`Message from ${userId} (${data.fromName}) to ${targetId}: ${data.message}`); // डीबग लॉग
             } else {
                 console.log(`Target ID ${targetId} not found for message`); // डीबग लॉग
             }

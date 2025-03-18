@@ -192,6 +192,7 @@
 <body>
     <div class="chat-container">
         <h2>Private Chat</h2>
+        <label>Enter Your Name: <input type="text" id="user-name" placeholder="Your Name"></label>
         <p>Your Unique ID: <span id="user-id">Loading...</span></p>
         <label>Enter Partner's ID: <input type="text" id="target-id"></label>
         <button onclick="connect()">Connect</button>
@@ -204,6 +205,7 @@
         console.log('Starting WebSocket connection...');
         let ws;
         let userId = '';
+        let userName = '';
         let partnerId = '';
 
         try {
@@ -238,7 +240,8 @@
             }
 
             if (data.type === 'message') {
-                document.getElementById('chat-box').innerHTML += `<p>${data.from}: ${data.message}</p>`;
+                // मैसेज में नाम और मैसेज दिखाएं
+                document.getElementById('chat-box').innerHTML += `<p>${data.fromName}: ${data.message}</p>`;
             }
 
             if (data.type === 'disconnected') {
@@ -260,6 +263,11 @@
 
         function connect() {
             const targetId = document.getElementById('target-id').value;
+            userName = document.getElementById('user-name').value.trim();
+            if (!userName) {
+                alert('Please enter your name');
+                return;
+            }
             if (targetId) {
                 ws.send(JSON.stringify({ type: 'connect', targetId: targetId }));
             } else {
@@ -269,8 +277,14 @@
 
         function sendMessage() {
             const message = document.getElementById('message-input').value;
+            userName = document.getElementById('user-name').value.trim();
+            if (!userName) {
+                alert('Please enter your name');
+                return;
+            }
             if (message && partnerId) {
-                ws.send(JSON.stringify({ type: 'message', message: message }));
+                // मैसेज के साथ नाम भेजें
+                ws.send(JSON.stringify({ type: 'message', message: message, fromName: userName }));
                 document.getElementById('chat-box').innerHTML += `<p>You: ${message}</p>`;
                 document.getElementById('message-input').value = '';
             } else if (!partnerId) {
